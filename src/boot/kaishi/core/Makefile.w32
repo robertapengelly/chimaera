@@ -1,0 +1,123 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+ifeq ($(ARCH),AMD64)
+BIOS_ASMSRCS        :=  $(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /v "efi" | find /v "i386" | findstr /e ".asm")
+COMMON_SOURCES      :=  $(subst \,/,$(filter-out $(FORMATTED_PATH)\bootstrap.asm,$(BIOS_ASMSRCS)))
+
+BIOS_CSRCS          :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | findstr /v "efi" | find /v "i386" | findstr /e ".c"))
+BIOS_OBJ            :=  $(patsubst $(SRCDIR)/%, %, $(COMMON_SOURCES:.asm=.o) $(BIOS_CSRCS:.c=.o))
+
+EFI_ASMSRCS         :=  $(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /v "bios" | find /v "i386" | findstr /e ".asm")
+COMMON_SOURCES      :=  $(subst \,/,$(filter-out $(FORMATTED_PATH)\bootstrap.asm,$(EFI_ASMSRCS)))
+
+EFI_CSRCS           :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | find /v "bios" | find /v "i386" | findstr /e ".c"))
+EFI_OBJ            	:=  $(patsubst $(SRCDIR)/%, %, $(COMMON_SOURCES:.asm=.o) $(EFI_CSRCS:.c=.o))
+
+all: bootx64.efi kaishi.sys
+else
+BIOS_ASMSRCS        :=  $(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /v "efi" | find /v "amd64" | findstr /e ".asm")
+COMMON_SOURCES      :=  $(subst \,/,$(filter-out $(FORMATTED_PATH)\bootstrap.asm,$(BIOS_ASMSRCS)))
+
+BIOS_CSRCS          :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | findstr /v "efi" | find /v "amd64" | findstr /e ".c"))
+BIOS_OBJ            :=  $(patsubst $(SRCDIR)/%, %, $(COMMON_SOURCES:.asm=.o) $(BIOS_CSRCS:.c=.o))
+
+EFI_ASMSRCS         :=  $(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /v "bios" | find /v "amd64" | findstr /e ".asm")
+COMMON_SOURCES      :=  $(subst \,/,$(filter-out $(FORMATTED_PATH)\bootstrap.asm,$(EFI_ASMSRCS)))
+
+EFI_CSRCS           :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | find /v "bios" | find /v "amd64" | findstr /e ".c"))
+EFI_OBJ            	:=  $(patsubst $(SRCDIR)/%, %, $(COMMON_SOURCES:.asm=.o) $(EFI_CSRCS:.c=.o))
+
+all: bootia32.efi kaishi.sys
+endif
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist bootstrap.bin ( del /q bootstrap.bin )
+	if exist kaishi.exe ( del /q kaishi.exe )
+
+	if exist bootia32.efi ( del /q bootia32.efi )
+	if exist bootx64.efi ( del /q bootx64.efi )
+	if exist kaishi.sys ( del /q kaishi.sys )
+
+ifeq ($(ARCH),AMD64)
+kaishi.sys: bootstrap.bin kaishi.exe
+
+	type $^ > $@ 2>nul
+
+bootstrap.bin: bootstrap.o
+
+	../../../utils/binutils/slink --oformat binary -o $@ $^
+
+kaishi.exe: $(BIOS_OBJ)
+
+	../../../utils/binutils/slink --oformat axe-amd64 -N -e _start -o $@ $^
+
+bootx64.efi: $(EFI_OBJ)
+
+	../../../utils/binutils/slink --oformat pe-amd64 --subsystem 10 -e efi_main -o $@ $^
+
+bootstrap.o: bootstrap.asm
+
+	../../../utils/binutils/sasm -D__AMD64__ -f coff -I$(SRCDIR)/include -l bootstrap.lst -o $@ $<
+
+arch/bios/realmode/amd64.o: arch/bios/realmode/amd64.asm
+
+	if not exist "arch/bios/realmode" ( mkdir -p "arch/bios/realmode" )
+	../../../utils/binutils/sasm -f coff -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -I$(SRCDIR)/include -l $*.lst -o $@ $<
+else
+kaishi.sys: bootstrap.bin kaishi.exe
+
+	type $^ > $@ 2>nul
+
+bootstrap.bin: bootstrap.o
+
+	../../../utils/binutils/slink --oformat binary -o $@ $^
+
+kaishi.exe: $(BIOS_OBJ)
+
+	../../../utils/binutils/slink --oformat axe-i386 -N -e _start -o $@ $^
+
+bootia32.efi: $(EFI_OBJ)
+
+	../../../utils/binutils/slink --oformat pe-i386 --subsystem 10 -e _efi_main -o $@ $^
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f coff -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f coff -I$(SRCDIR)/include -l $*.lst -o $@ $<
+endif

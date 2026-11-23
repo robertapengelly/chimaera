@@ -1,0 +1,36 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SLASH               :=  /
+
+MAKE                +=  -r --quiet --no-print-directory
+MAKEFLAGS           +=  -r --quiet --no-print-directory
+
+OBJDIR              :=  $(CURDIR)
+
+ifeq ($(patsubst %$(SLASH),,$(lastword $(OBJDIR))),)
+  OBJDIR            :=  $(OBJDIR)build
+else
+  OBJDIR            :=  $(OBJDIR)/build
+endif
+
+SRCDIR              :=  $(CURDIR)
+
+ifeq ($(patsubst %$(SLASH),,$(lastword $(SRCDIR))),)
+  SRCDIR            :=  $(SRCDIR)src
+else
+  SRCDIR            :=  $(SRCDIR)/src
+endif
+
+MAKECMDGOALS        ?=  all
+PRIVATE-TARGETS     :=  spotless
+
+.PHONY: $(filter-out $(PRIVATE-TARGETS), $(MAKECMDGOALS))
+$(filter-out $(PRIVATE-TARGETS), $(MAKECMDGOALS)):
+
+	if not exist "$(OBJDIR)" ( mkdir "$(OBJDIR)" )
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/Makefile.w32" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)" $(MAKECMDGOALS)
+
+spotless:
+
+	if exist "$(OBJDIR)" ( rmdir /q /s "$(OBJDIR)" )

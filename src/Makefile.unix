@@ -1,0 +1,224 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+TARGETS             :=  utils boot dlls libc corazon modules init apps
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+#SHELL               := /bin/bash
+
+all:
+
+	for d in $(TARGETS); do \
+	  if [ ! -d "$(OBJDIR)/$$d" ]; then mkdir -p "$(OBJDIR)/$$d"; fi; \
+	  $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" all; \
+	done
+
+clean:
+
+	for d in $(TARGETS); do \
+	  if [ -d "$(OBJDIR)/$$d" ]; then \
+	    $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" clean; \
+	  fi; \
+	done
+
+	for f in `find . -name '*.log'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+ifeq ($(ARCH),AMD64)
+amd64/chimaera.img: all
+else
+i386/chimaera.img: all
+endif
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	if [ -f $@ ]; then rm -rf $@; fi
+
+ifeq ($(ARCH),AMD64)
+	utils/dosfstools/mkdosfs --boot boot/kaishi/boot/fat12.bin --sectors 5760 -F 12 -n "CHIMAERA OS" $@
+	utils/dosfstools/mmd -i $@ /efi /efi/boot
+
+	utils/dosfstools/mcopy -i $@ boot/kaishi/core/bootx64.efi ::/efi/boot/
+	utils/dosfstools/mcopy -i $@ boot/kaishi/core/kaishi.sys ::kaishi
+else
+	utils/dosfstools/mkdosfs --boot boot/kaishi/boot/fat12.bin --sectors 5760 -F 12 -n "CHIMAERA OS" $@
+	utils/dosfstools/mmd -i $@ /efi /efi/boot
+
+	utils/dosfstools/mcopy -i $@ boot/kaishi/core/bootia32.efi ::/efi/boot/
+	utils/dosfstools/mcopy -i $@ boot/kaishi/core/kaishi.sys ::kaishi
+endif
+
+	utils/dosfstools/mmd -i $@ boot
+
+	utils/dosfstools/mcopy -i $@ $(SRCDIR)/boot/kaishi/kaishi.cfg ::/boot/kaishi.cfg
+	utils/dosfstools/mcopy -i $@ corazon/corazon.exe ::/boot/corazon
+
+	utils/dosfstools/mmd -i $@ modules
+
+	utils/dosfstools/mcopy -i $@ modules/axe/axe.mod ::/modules/axe.mod
+	utils/dosfstools/mcopy -i $@ modules/pe/pe.mod ::/modules/pe.mod
+	utils/dosfstools/mcopy -i $@ modules/msdos/msdos.mod ::/modules/msdos.mod
+	utils/dosfstools/mcopy -i $@ modules/armv7/armv7.mod ::/modules/armv7.mod
+	utils/dosfstools/mcopy -i $@ modules/shell/shell.mod ::/modules/shell.mod
+
+	utils/dosfstools/mmd -i $@ /sbin
+
+	utils/dosfstools/mcopy -i $@ init/init ::/sbin/init
+	utils/dosfstools/mcopy -i $@ apps/w32test/w32test.exe ::/sbin/w32test.exe
+
+	utils/dosfstools/mmd -i $@ /bin
+
+	utils/dosfstools/mcopy -i $@ apps/echo/echo ::/bin/echo
+	utils/dosfstools/mcopy -i $@ apps/sh/sh ::/bin/sh
+	utils/dosfstools/mcopy -i $@ apps/cat/cat ::/bin/cat
+	utils/dosfstools/mcopy -i $@ apps/date/date ::/bin/date
+	utils/dosfstools/mcopy -i $@ apps/ls/ls ::/bin/ls
+	utils/dosfstools/mcopy -i $@ apps/dir/dir ::/bin/dir
+	utils/dosfstools/mcopy -i $@ apps/pwd/pwd ::/bin/pwd
+	utils/dosfstools/mcopy -i $@ apps/clear/clear ::/bin/clear
+	utils/dosfstools/mcopy -i $@ apps/touch/touch ::/bin/touch
+	utils/dosfstools/mcopy -i $@ apps/mkdir/mkdir ::/bin/mkdir
+	utils/dosfstools/mcopy -i $@ apps/rm/rm ::/bin/rm
+	utils/dosfstools/mcopy -i $@ apps/rmdir/rmdir ::/bin/rmdir
+	utils/dosfstools/mcopy -i $@ apps/tar/tar ::/bin/tar
+	utils/dosfstools/mcopy -i $@ apps/cp/cp ::/bin/cp
+
+	utils/dosfstools/mmd -i $@ /usr /usr/bin /usr/share /usr/share/fonts /usr/share/fonts/truetype
+
+	utils/dosfstools/mcopy -i $@ apps/atto/atto ::/usr/bin/atto
+	utils/dosfstools/mcopy -i $@ apps/which/which ::/usr/bin/which
+	utils/dosfstools/mcopy -i $@ apps/unzip/unzip ::/usr/bin/unzip
+	utils/dosfstools/mcopy -i $@ apps/wc/wc ::/usr/bin/wc
+
+	utils/dosfstools/mcopy -i $@ $(SRCDIR)/fonts/SpaceMono-Bold.ttf ::/usr/share/fonts/truetype/SpaceMono-Bold.ttf
+	utils/dosfstools/mcopy -i $@ $(SRCDIR)/fonts/SpaceMono-Regular.ttf ::/usr/share/fonts/truetype/SpaceMono-Regular.ttf
+
+ifeq ($(ARCH),AMD64)
+	utils/dosfstools/mmd -i $@ /nt /nt/System32 /nt/SysWOW64
+
+	utils/dosfstools/mcopy -i $@ dlls/kernel32/amd64/kernel32.dll ::/nt/System32/kernel32.dll
+	utils/dosfstools/mcopy -i $@ dlls/msvcrt/amd64/msvcrt.dll ::/nt/System32/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ dlls/ntdll/amd64/ntdll.dll ::/nt/System32/ntdll.dll
+
+	utils/dosfstools/mcopy -i $@ dlls/kernel32/i386/kernel32.dll ::/nt/SysWOW64/kernel32.dll
+	utils/dosfstools/mcopy -i $@ dlls/msvcrt/i386/msvcrt.dll ::/nt/SysWOW64/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ dlls/ntdll/i386/ntdll.dll ::/nt/SysWOW64/ntdll.dll
+else
+	utils/dosfstools/mmd -i $@ /nt /nt/System32
+	utils/dosfstools/mcopy -i $@ dlls/kernel32/i386/kernel32.dll ::/nt/System32/kernel32.dll
+	utils/dosfstools/mcopy -i $@ dlls/msvcrt/i386/msvcrt.dll ::/nt/System32/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ dlls/ntdll/i386/ntdll.dll ::/nt/System32/ntdll.dll
+endif
+
+#	for i in {1..108}; do utils/dosfstools/mmd -i $@ `printf "abc_%04d.txt" $$i`; done
+#	utils/dosfstools/mcopy -i $@ $(SRCDIR)/dos/COMMAND.COM ::
+#	utils/dosfstools/mcopy -i $@ $(SRCDIR)/dos/EDLIN.COM ::
+#	utils/dosfstools/mcopy -i $@ $(SRCDIR)/dos/TREE.COM ::
+#	utils/dosfstools/mcopy -i $@ $(SRCDIR)/armv7/bash ::
+
+ifeq ($(ARCH),AMD64)
+amd64/chimaera.vhd: all
+else
+i386/chimaera.vhd: all
+endif
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	if [ -f $@ ]; then rm -rf $@; fi
+
+#	utils/parted/parted --boot boot/mbr/dosmbr.bin mkpart 128,0x06,17,20480 mkpart 0,0x83,20497,81920 $@
+	
+#	utils/dosfstools/mkdosfs --boot boot/kaishi/boot/fat16.bin --offset 17 --sectors 20480 -F 16 -n "CHIMAERA OS" $@
+#	utils/e2fsprogs/mke2fs --offset 20497 --sectors 81920 $@
+
+	utils/parted/parted --boot boot/mbr/dosmbr.bin mkpart 128,0x0B,17,81920 $@
+	utils/dosfstools/mkdosfs --boot boot/kaishi/boot/fat32_chs.bin --offset 17 --sectors 81920 -F 32 -n "CHIMAERA OS" $@
+	
+	utils/dosfstools/mmd -i $@ --offset 17 /efi /efi/boot
+
+ifeq ($(ARCH),AMD64)
+	utils/dosfstools/mcopy -i $@ --offset 17 boot/kaishi/core/bootx64.efi ::/efi/boot/
+	utils/dosfstools/mcopy -i $@ --offset 17 boot/kaishi/core/kaishi.sys ::kaishi
+else
+	utils/dosfstools/mcopy -i $@ --offset 17 boot/kaishi/core/bootia32.efi ::/efi/boot/
+	utils/dosfstools/mcopy -i $@ --offset 17 boot/kaishi/core/kaishi.sys ::kaishi
+endif
+
+	utils/dosfstools/mmd -i $@ --offset 17 boot
+
+	utils/dosfstools/mcopy -i $@ --offset 17 $(SRCDIR)/boot/kaishi/kaishi.cfg ::/boot/kaishi.cfg
+	utils/dosfstools/mcopy -i $@ --offset 17 corazon/corazon.exe ::/boot/corazon
+
+	utils/dosfstools/mmd -i $@ --offset 17 modules
+
+	utils/dosfstools/mcopy -i $@ --offset 17 modules/axe/axe.mod ::/modules/axe.mod
+	utils/dosfstools/mcopy -i $@ --offset 17 modules/pe/pe.mod ::/modules/pe.mod
+	utils/dosfstools/mcopy -i $@ --offset 17 modules/msdos/msdos.mod ::/modules/msdos.mod
+	utils/dosfstools/mcopy -i $@ --offset 17 modules/armv7/armv7.mod ::/modules/armv7.mod
+	utils/dosfstools/mcopy -i $@ --offset 17 modules/shell/shell.mod ::/modules/shell.mod
+
+	utils/dosfstools/mmd -i $@ --offset 17 /sbin
+
+	utils/dosfstools/mcopy -i $@ --offset 17 init/init ::/sbin/init
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/w32test/w32test.exe ::/sbin/w32test.exe
+
+	utils/dosfstools/mmd -i $@ --offset 17 /bin
+
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/echo/echo ::/bin/echo
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/sh/sh ::/bin/sh
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/cat/cat ::/bin/cat
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/date/date ::/bin/date
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/ls/ls ::/bin/ls
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/dir/dir ::/bin/dir
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/pwd/pwd ::/bin/pwd
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/clear/clear ::/bin/clear
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/touch/touch ::/bin/touch
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/mkdir/mkdir ::/bin/mkdir
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/rm/rm ::/bin/rm
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/rmdir/rmdir ::/bin/rmdir
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/tar/tar ::/bin/tar
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/cp/cp ::/bin/cp
+
+	utils/dosfstools/mmd -i $@ --offset 17 /usr /usr/bin /usr/share /usr/share/fonts /usr/share/fonts/truetype
+
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/atto/atto ::/usr/bin/atto
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/which/which ::/usr/bin/which
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/unzip/unzip ::/usr/bin/unzip
+	utils/dosfstools/mcopy -i $@ --offset 17 apps/wc/wc ::/usr/bin/wc
+
+	utils/dosfstools/mcopy -i $@ --offset 17 $(SRCDIR)/fonts/SpaceMono-Bold.ttf ::/usr/share/fonts/truetype/SpaceMono-Bold.ttf
+	utils/dosfstools/mcopy -i $@ --offset 17 $(SRCDIR)/fonts/SpaceMono-Regular.ttf ::/usr/share/fonts/truetype/SpaceMono-Regular.ttf
+
+ifeq ($(ARCH),AMD64)
+	utils/dosfstools/mmd -i $@ --offset 17 /nt /nt/System32 /nt/SysWOW64
+
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/kernel32/amd64/kernel32.dll ::/nt/System32/kernel32.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/msvcrt/amd64/msvcrt.dll ::/nt/System32/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/ntdll/amd64/ntdll.dll ::/nt/System32/ntdll.dll
+
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/kernel32/i386/kernel32.dll ::/nt/SysWOW64/kernel32.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/msvcrt/i386/msvcrt.dll ::/nt/SysWOW64/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/ntdll/i386/ntdll.dll ::/nt/SysWOW64/ntdll.dll
+else
+	utils/dosfstools/mmd -i $@ --offset 17 /nt /nt/System32
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/kernel32/i386/kernel32.dll ::/nt/System32/kernel32.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/msvcrt/i386/msvcrt.dll ::/nt/System32/msvcrt.dll
+	utils/dosfstools/mcopy -i $@ --offset 17 dlls/ntdll/i386/ntdll.dll ::/nt/System32/ntdll.dll
+endif
+
+#	for i in {1..108}; do utils/dosfstools/mmd -i $@ --offset 17 `printf "abc_%04d.txt" $$i`; done
+
+ifeq ($(ARCH),AMD64)
+run-qemu: amd64/chimaera.img amd64/chimaera.vhd
+
+	qemu-system-x86_64 -drive file="amd64/chimaera.img",format=raw,if=floppy,index=0 -m 64M \
+	  -serial file:chimaera_img.log -name "Chimaera OS" -serial mon:stdio
+	qemu-system-x86_64 -drive file="amd64/chimaera.vhd",format=raw,if=ide,index=0 -m 64M \
+	  -serial file:chimaera_vhd.log -name "Chimaera OS" -serial mon:stdio
+else
+run-qemu: i386/chimaera.img i386/chimaera.vhd
+
+	qemu-system-i386 -cpu 486 -drive file="i386/chimaera.img",format=raw,if=floppy,index=0 -m 16M \
+	  -serial file:chimaera_img.log -name "Chimaera OS" -serial mon:stdio
+	qemu-system-i386 -cpu 486 -drive file="i386/chimaera.vhd",format=raw,if=ide,index=0 -m 16M \
+	  -serial file:chimaera_vhd.log -name "Chimaera OS" -serial mon:stdio
+endif

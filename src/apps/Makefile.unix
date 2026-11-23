@@ -1,0 +1,22 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+TARGETS             :=  $(patsubst $(SRCDIR)/%, %, $(shell find "$(SRCDIR)" -mindepth 1 -maxdepth 1 -type d))
+
+all:
+
+	for d in $(TARGETS); do \
+	  if [ ! -d "$(OBJDIR)/$$d" ]; then mkdir -p "$(OBJDIR)/$$d"; fi; \
+	  $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" all; \
+	done
+
+clean:
+
+	for d in $(TARGETS); do \
+	  if [ -d "$(OBJDIR)/$$d" ]; then \
+	    $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" clean; \
+	  fi; \
+	done

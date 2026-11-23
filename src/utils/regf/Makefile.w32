@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -O2 -Wall -Werror -Wextra
+
+CSRC                :=  arena.c edit.c hashtab.c lib.c ll.c parse.c reader.c regf.c report.c security.c tree.c writer.c
+
+all: regf.exe
+
+clean:
+
+	if exist regf.exe ( del /q regf.exe )
+	if exist regf ( del /q regf )
+
+regf.exe: $(CSRC)
+
+	$(CC) $(CFLAGS) -o $@ $^

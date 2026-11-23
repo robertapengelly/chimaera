@@ -1,0 +1,67 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(shell find "$(SRCDIR)" -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -type f -name '*.c')
+
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+all: ntdll.def ntdll.dll
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f ntdll.dll ]; then rm -rf ntdll.dll; fi
+
+ntdll.def: $(ASMOBJ)
+
+	echo "EXPORTS" > $@
+	echo "    _NtAllocateVirtualMemory@24" >> $@
+	echo "    _ZwAllocateVirtualMemory@24=_NtAllocateVirtualMemory@24" >> $@
+	echo "    _NtClose@4" >> $@
+	echo "    _ZwClose@4=_NtClose@4" >> $@
+	echo "    _NtCreateFile@44" >> $@
+	echo "    _ZwCreateFile@44=_NtCreateFile@44" >> $@
+	echo "    _NtFreeVirtualMemory@16" >> $@
+	echo "    _ZwFreeVirtualMemory@16=_NtFreeVirtualMemory@16" >> $@
+	echo "    _NtOpenFile@24" >> $@
+	echo "    _ZwOpenFile@24=_NtOpenFile@24" >> $@
+	echo "    _NtQueryInformationFile@20" >> $@
+	echo "    _ZwQueryInformationFile@20=_NtQueryInformationFile@20" >> $@
+	echo "    _NtQuerySystemTime@4" >> $@
+	echo "    _ZwQuerySystemTime@4=_NtQuerySystemTime@4" >> $@
+	echo "    _NtReadFile@36" >> $@
+	echo "    _ZwReadFile@36=_NtReadFile@36" >> $@
+	echo "    _NtSetInformationFile@20" >> $@
+	echo "    _ZwSetInformationFile@20=_NtSetInformationFile@20" >> $@
+	echo "    _NtTerminateProcess@8" >> $@
+	echo "    _ZwTerminateProcess@8=_NtTerminateProcess@8" >> $@
+	echo "    _NtWriteFile@36" >> $@
+	echo "    _ZwWriteFile@36=_NtWriteFile@36" >> $@
+
+ntdll.dll: $(OBJ)
+
+	../../../utils/binutils/slink --oformat pe-i386 -e _DllMain@12 --shared --kill-at --def-list ntdll.def --out-implib ntdll.lib -Map ntdll.map -o $@ $^
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

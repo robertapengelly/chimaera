@@ -1,0 +1,37 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+all: fat12.bin fat16.bin fat32_chs.bin
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+
+	if exist fat12.bin ( del /q fat12.bin )
+	if exist fat12.lst ( del /q fat12.lst )
+
+	if exist fat16.bin ( del /q fat16.bin )
+	if exist fat16.lst ( del /q fat16.lst )
+
+	if exist fat32_chs.bin ( del /q fat32_chs.bin )
+	if exist fat32_chs.lst ( del /q fat32_chs.lst )
+
+fat12.bin: oldfat.asm
+
+	../../../utils/binutils/sasm -D__FAT12__ -l fat12.lst -o fat12.o $<
+	../../../utils/binutils/slink --oformat binary -o $@ fat12.o
+
+fat16.bin: oldfat.asm
+
+	../../../utils/binutils/sasm -D__FAT16__ -l fat16.lst -o fat16.o $<
+	../../../utils/binutils/slink --oformat binary -o $@ fat16.o
+
+fat32_chs.bin: fat32_chs.asm
+
+	../../../utils/binutils/sasm -l fat32_chs.lst -o fat32_chs.o $<
+	../../../utils/binutils/slink --oformat binary -o $@ fat32_chs.o

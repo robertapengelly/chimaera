@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -O2 -Wall -Werror -Wextra
+
+CSRC                :=   comp.c hashtab.c lib.c ll.c manifest.c pkg.c report.c writer.c
+
+all: pkg.exe
+
+clean:
+
+	if exist pkg ( del /q pkg )
+	if exist pkg.exe ( del /q pkg.exe )
+
+pkg.exe: $(CSRC)
+
+	$(CC) $(CFLAGS) -o $@ $^

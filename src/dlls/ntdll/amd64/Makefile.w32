@@ -1,0 +1,44 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /e ".asm"))
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+
+all: ntdll.def ntdll.dll
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist ntdll.dll ( del /q ntdll.dll )
+
+ntdll.def: $(ASMOBJ)
+
+	echo EXPORTS > $@
+	for %%f in ($(subst /,\,$(ASMOBJ))) @if not "%%~nf"=="DllMain" do @echo     %%~nf >> $@ @for /f "tokens=1,* delims=t" %%a in ("%%~nf") do @if "%%a"=="N" echo     Zw%%b=%%~nf >> $@
+
+ntdll.dll: $(ASMOBJ)
+
+	../../../utils/binutils/slink --oformat pe-amd64 -e DllMain --shared --kill-at --def-list ntdll.def --out-implib ntdll.lib -Map ntdll.map -o $@ $^
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -D__AMD64__ -l $*.lst -o $@ $<

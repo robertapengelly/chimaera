@@ -1,0 +1,59 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all: ntdll kernel32 msvcrt
+
+clean:
+
+	if exist "$(OBJDIR)/%%d" "$(OBJDIR)/ntdll" ( rmdir /q /s "$(OBJDIR)/ntdll" )
+	if exist "$(OBJDIR)/%%d" "$(OBJDIR)/msvcrt" ( rmdir /q /s "$(OBJDIR)/msvcrt" )
+	if exist "$(OBJDIR)/%%d" "$(OBJDIR)/kernel32" ( rmdir /q /s "$(OBJDIR)/kernel32" )
+
+ifeq ($(ARCH),AMD64)
+.PHONY: ntdll
+ntdll:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=AMD64 OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: kernel32
+kernel32:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=AMD64 NTDLL=$(OBJDIR)/ntdll/amd64/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: msvcrt
+msvcrt:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=AMD64 NTDLL=$(OBJDIR)/ntdll/amd64/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/amd64/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/i386/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+else
+.PHONY: ntdll
+ntdll:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/System32/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+
+.PHONY: kernel32
+kernel32:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: msvcrt
+msvcrt:
+
+	if not exist "$(OBJDIR)/$@" ( mkdir "$(OBJDIR)/$@" )
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.w32" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/i386/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+endif

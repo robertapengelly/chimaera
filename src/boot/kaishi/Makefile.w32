@@ -1,0 +1,30 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+TARGETS             :=  boot core
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+all: config.hiv
+
+	for %%d in ($(TARGETS)) do ( \
+	  ( if not exist "$(OBJDIR)/%%d" ( mkdir "$(OBJDIR)/%%d" ) ) & \
+	  $(MAKE) -C "$(OBJDIR)/%%d" -f "$(SRCDIR)/%%d/Makefile.w32" OBJDIR="$(OBJDIR)/%%d" SRCDIR="$(SRCDIR)/%%d" all \
+	)
+
+clean:
+
+	if exist config.hiv ( del /q config.hiv )
+
+	for %%d in ($(TARGETS)) do ( \
+	  if exist "$(OBJDIR)/%%d" ( \
+	    $(MAKE) -C "$(OBJDIR)/%%d" -f "$(SRCDIR)/%%d/Makefile.w32" OBJDIR="$(OBJDIR)/%%d" SRCDIR="$(SRCDIR)/%%d" clean \
+	  ) \
+	)
+
+config.hiv: config.cfg
+
+	../../utils/regf/regf gen $< $@

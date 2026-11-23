@@ -1,0 +1,40 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(shell find "$(SRCDIR)" -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -type f -name '*.c')
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+all: libc.a
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f libc.a ]; then rm -rf libc.a; fi
+
+libc.a: $(OBJ)
+
+	../../utils/binutils/sar r $@ $^
+	../../utils/binutils/sar s $@
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/binutils/sasm -f win64 -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/binutils/sasm -f win64 -D__AMD64__ -l $*.lst -o $@ $<

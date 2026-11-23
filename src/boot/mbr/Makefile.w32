@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+all: dosmbr.bin
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+
+	if exist dosmbr.bin ( del /q dosmbr.bin )
+	if exist dosmbr.lst ( del /q dosmbr.lst )
+
+%.bin: %.asm
+
+	../../utils/binutils/sasm -l $*.lst -o $*.o $<
+	../../utils/binutils/slink --oformat binary -o $@ $*.o

@@ -1,0 +1,52 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(shell find "$(SRCDIR)" -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -type f -name '*.c')
+
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+all: ntdll.def ntdll.dll
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f ntdll.dll ]; then rm -rf ntdll.dll; fi
+
+ntdll.def: $(ASMOBJ)
+
+	echo "EXPORTS" > $@
+	for file in $(ASMOBJ); do \
+		name=$$(basename "$$file" .o); \
+		if [ "$$name" = "DllMain" ]; then continue; fi; \
+	    echo "    $$name" >> $@; \
+		zwname=$$(echo "$$name" | sed 's/^Nt/Zw/'); \
+    	echo "    $$zwname=$$name" >> $@; \
+	done
+
+ntdll.dll: $(OBJ)
+
+	../../../utils/binutils/slink --oformat pe-amd64 -e DllMain --shared --kill-at --def-list ntdll.def --out-implib ntdll.lib -Map ntdll.map -o $@ $^
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f win64 -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f win64 -D__AMD64__ -l $*.lst -o $@ $<

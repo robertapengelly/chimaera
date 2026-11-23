@@ -1,0 +1,37 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ifeq ($(ARCH),AMD64)
+all: amd64/crt0.o
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f amd64/crt0.o ]; then rm -rf amd64/crt0.o; fi
+
+amd64/crt0.o: $(SRCDIR)/amd64/crt0.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f win64 -D__AMD64__ -l crt0.lst -o $@ $<
+else
+all: i386/crt0.o
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f i386/crt0.o ]; then rm -rf i386/crt0.o; fi
+
+i386/crt0.o: $(SRCDIR)/i386/crt0.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f coff -D__I386__ -l crt0.lst -o $@ $<
+endif

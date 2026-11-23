@@ -1,0 +1,36 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+SLASH               :=  /
+
+MAKE                +=  -r --quiet --no-print-directory
+MAKEFLAGS           +=  -r --quiet --no-print-directory
+
+OBJDIR              :=  $(CURDIR)
+
+ifeq ($(subst $(SLASH),,$(lastword $(OBJDIR))),)
+  OBJDIR            :=  $(OBJDIR)build
+else
+  OBJDIR            :=  $(OBJDIR)/build
+endif
+
+SRCDIR              :=  $(CURDIR)
+
+ifeq ($(subst $(SLASH),,$(lastword $(SRCDIR))),)
+  SRCDIR            :=  $(SRCDIR)src
+else
+  SRCDIR            :=  $(SRCDIR)/src
+endif
+
+MAKECMDGOALS        ?=  all
+PRIVATE-TARGETS     :=  spotless
+
+.PHONY: $(filter-out $(PRIVATE-TARGETS), $(MAKECMDGOALS))
+$(filter-out $(PRIVATE-TARGETS), $(MAKECMDGOALS)):
+
+	if [ ! -d "$(OBJDIR)" ]; then mkdir -p "$(OBJDIR)"; fi
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)" $(MAKECMDGOALS)
+
+spotless:
+
+	if [ -d "$(OBJDIR)" ]; then rm -rf "$(OBJDIR)"; fi

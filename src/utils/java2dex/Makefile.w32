@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -O2 -Wall -Werror -Wextra
+
+CC_SRC              :=  $(wildcard $(SRCDIR)/*.c)
+
+all: java2dex.exe
+
+java2dex.exe: $(CC_SRC)
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+clean:
+
+	if exist java2dex.exe ( del /q java2dex.exe )
+	if exist java2dex ( del /q java2dex )

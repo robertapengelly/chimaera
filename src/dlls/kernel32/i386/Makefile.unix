@@ -1,0 +1,57 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(shell find "$(SRCDIR)" -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -type f -name '*.c')
+
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+COMMA               :=  ,
+BLANK               :=
+SPACE               :=  $(BLANK) $(BLANK)
+
+TEMP                :=  $(patsubst $(SRCDIR)/%,%,$(CSRC:.c=.def))
+CDEF                :=  $(subst $(SPACE),$(COMMA),$(TEMP))
+
+all: kernel32.def kernel32.dll
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f kernel32.dll ]; then rm -rf kernel32.dll; fi
+
+kernel32.def: $(ASMOBJ)
+
+	echo "EXPORTS" > $@
+		for file in $(ASMOBJ); do \
+		name=$$(basename "$$file" .o); \
+		if [ "$$name" = "DllMain" ]; then continue; fi; \
+		echo "    _$$name" >> $@; \
+	done
+
+kernel32.dll: $(OBJ) $(NTDLL)
+
+	../../../utils/binutils/slink --oformat pe-i386 -e _DllMain@12 --shared --kill-at --def-list kernel32.def,$(CDEF) --out-implib kernel32.lib -Map kernel32.map -o $@ $^
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

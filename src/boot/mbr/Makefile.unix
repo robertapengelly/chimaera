@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+all: dosmbr.bin
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f dosmbr.bin ]; then rm -rf dosmbr.bin; fi
+	if [ -f dosmbr.lst ]; then rm -rf dosmbr.lst; fi
+
+%.bin: %.asm
+
+	../../utils/binutils/sasm -l $*.lst -o $*.o $<
+	../../utils/binutils/slink --oformat binary -o $@ $*.o

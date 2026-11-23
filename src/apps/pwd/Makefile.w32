@@ -1,0 +1,39 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+CSRCS               :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | findstr /e ".c"))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(CSRCS:.c=.o))
+
+all: pwd
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist pwd ( del /q pwd )
+
+pwd: $(OBJ)
+
+	../../utils/binutils/slink --oformat axe-i386 -N -e _start -Map pwd.map -o $@ ../../libc/i386/crt0.o $^ ../../libc/i386/libc.a
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/binutils/sasm -f coff -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

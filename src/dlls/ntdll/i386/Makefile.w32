@@ -1,0 +1,65 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /e ".asm"))
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+
+all: ntdll.def ntdll.dll
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist ntdll.dll ( del /q ntdll.dll )
+
+ntdll.def: $(ASMOBJ)
+
+	echo EXPORTS > $@
+	echo.     _NtAllocateVirtualMemory@24 >> $@
+	echo.     _ZwAllocateVirtualMemory@24=_NtAllocateVirtualMemory@24 >> $@
+	echo.     _NtClose@4 >> $@
+	echo.     _ZwClose@4=_NtClose@4 >> $@
+	echo.     _NtCreateFile@44 >> $@
+	echo.     _ZwCreateFile@44=_NtCreateFile@44 >> $@
+	echo.     _NtFreeVirtualMemory@16 >> $@
+	echo.     _ZwFreeVirtualMemory@16=_NtFreeVirtualMemory@16 >> $@
+	echo.     _NtOpenFile@24 >> $@
+	echo.     _ZwOpenFile@24=_NtOpenFile@24 >> $@
+	echo.     _NtQueryInformationFile@20 >> $@
+	echo.     _ZwQueryInformationFile@20=_NtQueryInformationFile@20 >> $@
+	echo.     _NtQuerySystemTime@4 >> $@
+	echo.     _ZwQuerySystemTime@4=_NtQuerySystemTime@4 >> $@
+	echo.     _NtReadFile@36 >> $@
+	echo.     _ZwReadFile@36=_NtReadFile@36 >> $@
+	echo.     _NtSetInformationFile@20 >> $@
+	echo.     _ZwSetInformationFile@20=_NtSetInformationFile@20 >> $@
+	echo.     _NtTerminateProcess@8 >> $@
+	echo.     _ZwTerminateProcess@8=_NtTerminateProcess@8 >> $@
+	echo.     _NtWriteFile@36 >> $@
+	echo.     _ZwWriteFile@36=_NtWriteFile@36 >> $@
+
+ntdll.dll: $(ASMOBJ)
+
+	../../../utils/binutils/slink --oformat pe-i386 -e _DllMain@12 --shared --kill-at --def-list ntdll.def --out-implib ntdll.lib -Map ntdll.map -o $@ $^
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f coff -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

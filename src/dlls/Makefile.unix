@@ -1,0 +1,59 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all: ntdll kernel32 msvcrt
+
+clean:
+
+	if [ -d "$(OBJDIR)/ntdll" ]; then rm -rf "$(OBJDIR)/ntdll"; fi
+	if [ -d "$(OBJDIR)/msvcrt" ]; then rm -rf "$(OBJDIR)/msvcrt"; fi
+	if [ -d "$(OBJDIR)/kernel32" ]; then rm -rf "$(OBJDIR)/kernel32"; fi
+
+ifeq ($(ARCH),AMD64)
+.PHONY: ntdll
+ntdll:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=AMD64 OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: kernel32
+kernel32:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=AMD64 NTDLL=$(OBJDIR)/ntdll/amd64/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: msvcrt
+msvcrt:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=AMD64 NTDLL=$(OBJDIR)/ntdll/amd64/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/amd64/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/i386/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+else
+.PHONY: ntdll
+ntdll:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+
+.PHONY: kernel32
+kernel32:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+
+.PHONY: msvcrt
+msvcrt:
+
+	if [ ! -d "$(OBJDIR)/$@" ]; then mkdir -p "$(OBJDIR)/$@"; fi
+	$(MAKE) -C "$(OBJDIR)/$@" -f "$(SRCDIR)/$@/Makefile.unix" ARCH=I386 NTDLL=$(OBJDIR)/ntdll/i386/ntdll.lib KERNEL32=$(OBJDIR)/kernel32/i386/kernel32.lib OBJDIR="$(OBJDIR)/$@" SRCDIR="$(SRCDIR)/$@" all
+endif

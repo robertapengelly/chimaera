@@ -1,0 +1,57 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | findstr /e ".asm"))
+CSRC                :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | findstr /e ".c"))
+
+ASMOBJ              :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+COMMA               :=  ,
+BLANK               :=
+SPACE               :=  $(BLANK) $(BLANK)
+
+TEMP                :=  $(patsubst $(SRCDIR)/%,%,$(CSRC:.c=.def))
+CDEF                :=  $(subst $(SPACE),$(COMMA),$(TEMP))
+
+all: kernel32.def kernel32.dll
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist kernel32.dll ( del /q kernel32.dll )
+
+kernel32.def: $(ASMOBJ)
+
+	echo EXPORTS > $@
+	for %%f in ($(subst /,\,$(ASMOBJ))) do @if not "%%~nf"=="DllMain" echo     %%~nf >> $@
+
+kernel32.dll: $(OBJ) $(NTDLL)
+
+	../../../utils/binutils/slink --oformat pe-amd64 --shared --kill-at --def-list kernel32.def,$(CDEF) --out-implib kernel32.lib -Map kernel32.map -o $@ $^
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/../../../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../../utils/binutils/sasm -f win64 -D__AMD64__ -l $*.lst -o $@ $<

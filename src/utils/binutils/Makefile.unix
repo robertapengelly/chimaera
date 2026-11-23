@@ -1,0 +1,19 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+TARGETS             :=  ar as ld
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all:
+
+	for d in $(TARGETS); do \
+	  $(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/$$d" all; \
+	done
+
+clean:
+
+	for d in $(TARGETS); do \
+	  $(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/$$d" clean; \
+	done

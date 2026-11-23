@@ -1,0 +1,22 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+TARGETS             :=  axe pe shell
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all:
+
+	for %%d in ($(TARGETS)) do ( \
+	  ( if not exist "$(OBJDIR)/%%d" ( mkdir "$(OBJDIR)/%%d" ) ) & \
+	  $(MAKE) -C "$(OBJDIR)/%%d" -f "$(SRCDIR)/%%d/Makefile.w32" OBJDIR="$(OBJDIR)/%%d" SRCDIR="$(SRCDIR)/%%d" all \
+	)
+
+clean:
+
+	for %%d in ($(TARGETS)) do ( \
+	  if exist "$(OBJDIR)/%%d" ( \
+	    $(MAKE) -C "$(OBJDIR)/%%d" -f "$(SRCDIR)/%%d/Makefile.w32" OBJDIR="$(OBJDIR)/%%d" SRCDIR="$(SRCDIR)/%%d" clean \
+	  ) \
+	)

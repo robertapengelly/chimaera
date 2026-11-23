@@ -1,0 +1,67 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ifeq ($(ARCH),AMD64)
+ASMSRC              :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*i386*' -prune \) -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*i386*' -prune \) -type f -name '*.c')
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+else
+ASMSRC              :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*amd64*' -prune \) -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*amd64*' -prune \) -type f -name '*.c')
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+endif
+
+all: init
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.map'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f init ]; then rm -rf init; fi
+
+ifeq ($(ARCH),AMD64)
+init: $(OBJ)
+
+	../utils/binutils/slink --oformat axe-amd64 -N -e _start -Map init.map -o $@ ../libc/amd64/crt0.o $^ ../libc/amd64/libc.a
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f win64 -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f win64 -D__AMD64__ -l $*.lst -o $@ $<
+else
+init: $(OBJ)
+
+	../utils/binutils/slink --oformat axe-i386 -N -e _start -Map init.map -o $@ ../libc/i386/crt0.o $^ ../libc/i386/libc.a
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<
+endif

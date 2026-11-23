@@ -1,0 +1,47 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+ifeq ($(ARCH),AMD64)
+ASMSRCS             :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | find /v "i386" | findstr /e ".asm"))
+CSRCS               :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | find /v "i386" | findstr /e ".c"))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRCS:.asm=.o) $(CSRCS:.c=.o))
+else
+ASMSRCS             :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.asm | find /v "amd64" | findstr /e ".asm"))
+CSRCS               :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.c | find /v "amd64" | findstr /e ".c"))
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRCS:.asm=.o) $(CSRCS:.c=.o))
+endif
+
+all: libc.a
+
+clean:
+
+	for /r %%f in (*.o) do ( if exist %%f ( del /q %%f ) )
+	for /r %%f in (*.lst) do ( if exist %%f ( del /q %%f ) )
+
+	if exist libc.a ( del /q libc.a )
+
+libc.a: $(OBJ)
+
+	../../utils/binutils/sar r $@ $^
+	../../utils/binutils/sar s $@
+
+%.o: %.s
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/binutils/sasm -f coff -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../../libc/include -o $@ $<
+
+%.o: %.asm
+
+	if not exist $(subst /,\,$(patsubst %/, %, $(dir $@))) ( mkdir $(subst /,\,$(patsubst %/, %, $(dir $@))) )
+	../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

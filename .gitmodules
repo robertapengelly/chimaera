@@ -1,0 +1,21 @@
+[submodule "src/utils/dosfstools"]
+	path = src/utils/dosfstools
+	url = https://git.candlhat.org/dosfstools
+[submodule "src/utils/parted"]
+	path = src/utils/parted
+	url = https://git.candlhat.org/parted
+[submodule "src/utils/binutils/as"]
+	path = src/utils/binutils/as
+	url = https://git.candlhat.org/sasm
+[submodule "src/utils/binutils/ld"]
+	path = src/utils/binutils/ld
+	url = https://git.candlhat.org/slink
+[submodule "src/utils/binutils/ar"]
+	path = src/utils/binutils/ar
+	url = https://git.candlhat.org/sar
+[submodule "src/utils/scc"]
+	path = src/utils/scc
+	url = https://git.candlhat.org/scc
+[submodule "src/utils/e2fsprogs"]
+	path = src/utils/e2fsprogs
+	url = https://git.candlhat.org/e2fsprogs

@@ -1,0 +1,15 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all:
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" all
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" all
+
+clean: crt src
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" clean
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.unix" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" clean

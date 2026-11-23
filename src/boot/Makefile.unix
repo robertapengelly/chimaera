@@ -1,0 +1,22 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+TARGETS             :=  mbr kaishi
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all:
+
+	for d in $(TARGETS); do \
+	  if [ ! -d "$(OBJDIR)/$$d" ]; then mkdir -p "$(OBJDIR)/$$d"; fi; \
+	  $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" all; \
+	done
+
+clean:
+
+	for d in $(TARGETS); do \
+	  if [ -d "$(OBJDIR)/$$d" ]; then \
+	    $(MAKE) -C "$(OBJDIR)/$$d" -f "$(SRCDIR)/$$d/Makefile.unix" OBJDIR="$(OBJDIR)/$$d" SRCDIR="$(SRCDIR)/$$d" clean; \
+	  fi; \
+	done

@@ -1,0 +1,22 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+ifeq ($(ARCH),AMD64)
+TARGET              :=  amd64
+else
+TARGET              :=  i386
+endif
+
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+all:
+
+	if [ ! -d "$(OBJDIR)/$(TARGET)" ]; then mkdir -p "$(OBJDIR)/$(TARGET)"; fi
+	$(MAKE) -C "$(OBJDIR)/$(TARGET)" -f "$(SRCDIR)/$(TARGET)/Makefile.unix" OBJDIR="$(OBJDIR)/$(TARGET)" SRCDIR="$(SRCDIR)/$(TARGET)" all
+
+clean:
+
+	if [ -d "$(OBJDIR)/$(TARGET)" ]; then \
+		$(MAKE) -C "$(OBJDIR)/$(TARGET)" -f "$(SRCDIR)/$(TARGET)/Makefile.unix" OBJDIR="$(OBJDIR)/$(TARGET)" SRCDIR="$(SRCDIR)/$(TARGET)" clean; \
+	fi

@@ -1,0 +1,30 @@
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+ifeq ($(ARCH),AMD64)
+all:
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" ARCH=AMD64 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" all
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" ARCH=AMD64 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" all
+	
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" ARCH=I386 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" all
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" ARCH=I386 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" all
+
+clean:
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" ARCH=AMD64 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" clean
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" ARCH=AMD64 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" clean
+	
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" ARCH=I386 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" clean
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" ARCH=I386 OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" clean
+else
+all:
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" all
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" all
+
+clean:
+
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/crt/Makefile.w32" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/crt" clean
+	$(MAKE) -C "$(OBJDIR)" -f "$(SRCDIR)/src/Makefile.w32" OBJDIR="$(OBJDIR)" SRCDIR="$(SRCDIR)/src" clean
+endif

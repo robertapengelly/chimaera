@@ -1,0 +1,20 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+FORMATTED_PATH      :=  $(subst /,\,$(SRCDIR))
+VPATH               :=  $(SRCDIR)
+
+SRC                 :=  $(subst \,/,$(shell dir /a-d /s /b $(FORMATTED_PATH)\\*.java))
+
+all: base.dex
+
+clean:
+
+	if [ -f base.dex ]; then rm -rf base.dex; fi
+
+base.dex: $(SRC)
+
+	../utils/java2dex/java2dex -o $@ $^

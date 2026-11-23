@@ -1,0 +1,18 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+SRC                 :=  $(shell find "$(SRCDIR)" -type f -name '*.java')
+
+all: base.dex
+
+clean:
+
+	if [ -f base.dex ]; then rm -rf base.dex; fi
+
+base.dex: $(SRC)
+
+	../utils/java2dex/java2dex -o $@ $^

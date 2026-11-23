@@ -1,0 +1,21 @@
+#******************************************************************************
+# @file             Makefile.w32
+#******************************************************************************
+SRCDIR              ?=  $(CURDIR)
+VPATH               :=  $(SRCDIR)
+
+CC                  :=  gcc
+CFLAGS              :=  -D_FILE_OFFSET_BITS=64 -O2 -Wall -Werror -Wextra
+
+CC_SRC              :=  $(wildcard $(SRCDIR)/*.c)
+
+all: minidvm.exe
+
+minidvm.exe: $(CC_SRC)
+
+	$(CC) $(CFLAGS) -o $@ $^
+
+clean:
+
+	if exist minidvm.exe ( del /q minidvm.exe )
+	if exist minidvm ( del /q minidvm )

@@ -1,0 +1,40 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ASMSRC              :=  $(shell find "$(SRCDIR)" -mindepth 2 -type f -name '*.asm')
+CSRC                :=  $(shell find "$(SRCDIR)" -mindepth 1 -type f -name '*.c')
+OBJ                 :=  $(patsubst $(SRCDIR)/%, %, $(ASMSRC:.asm=.o) $(CSRC:.c=.o))
+
+all: atto
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.map'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f atto ]; then rm -rf atto; fi
+
+atto: $(OBJ)
+
+	../../utils/binutils/slink --oformat axe-i386 -N -e _start -Map atto.map -o $@ ../../libc/i386/crt0.o $^ ../../libc/i386/libc.a
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -D__I386__ -I$(SRCDIR)/../../libc/include -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../utils/binutils/sasm -f coff -D__I386__ -l $*.lst -o $@ $<

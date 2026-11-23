@@ -1,0 +1,115 @@
+#******************************************************************************
+# @file             Makefile.unix
+#******************************************************************************
+OBJDIR              ?=  $(CURDIR)
+SRCDIR              ?=  $(CURDIR)
+
+VPATH               :=  $(SRCDIR)
+
+ifeq ($(ARCH),AMD64)
+BIOS_ASMSRC         :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*efi*' -prune \) ! \( -path '*i386*' -prune \) -type f -name '*.asm')
+BIOS_CSRC           :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*efi*' -prune \) ! \( -path '*i386*' -prune \) -type f -name '*.c')
+BIOS_OBJ            :=  $(patsubst $(SRCDIR)/%, %, $(BIOS_ASMSRC:.asm=.o) $(BIOS_CSRC:.c=.o))
+
+EFI_ASMSRC          :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*bios*' -prune \) ! \( -path '*i386*' -prune \) -type f -name '*.asm')
+EFI_CSRC            :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*bios*' -prune \) ! \( -path '*i386*' -prune \) -type f -name '*.c')
+EFI_OBJ            	:=  $(patsubst $(SRCDIR)/%, %, $(EFI_ASMSRC:.asm=.o) $(EFI_CSRC:.c=.o))
+
+all: bootx64.efi kaishi.sys
+else
+BIOS_ASMSRC         :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*efi*' -prune \) ! \( -path '*amd64*' -prune \) -type f -name '*.asm')
+BIOS_CSRC           :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*efi*' -prune \) ! \( -path '*amd64*' -prune \) -type f -name '*.c')
+BIOS_OBJ            :=  $(patsubst $(SRCDIR)/%, %, $(BIOS_ASMSRC:.asm=.o) $(BIOS_CSRC:.c=.o))
+
+EFI_ASMSRC          :=  $(shell find "$(SRCDIR)" -mindepth 2 ! \( -path '*bios*' -prune \) ! \( -path '*amd64*' -prune \) -type f -name '*.asm')
+EFI_CSRC            :=  $(shell find "$(SRCDIR)" -mindepth 1 ! \( -path '*bios*' -prune \) ! \( -path '*amd64*' -prune \) -type f -name '*.c')
+EFI_OBJ             :=  $(patsubst $(SRCDIR)/%, %, $(EFI_ASMSRC:.asm=.o) $(EFI_CSRC:.c=.o))
+
+all: bootia32.efi kaishi.sys
+endif
+
+clean:
+
+	for f in `find . -name '*.o'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.lst'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+	for f in `find . -name '*.map'`; do if [ -f $$f ]; then rm -rf $$f; fi; done
+
+	if [ -f bootstrap.bin ]; then rm -rf bootstrap.bin; fi
+	if [ -f kaishi.exe ]; then rm -rf kaishi.exe; fi
+
+	if [ -f bootia32.efi ]; then rm -rf bootia32.efi; fi
+	if [ -f bootx64.efi ]; then rm -rf bootx64.efi; fi
+	if [ -f kaishi.sys ]; then rm -rf kaishi.sys; fi
+
+ifeq ($(ARCH),AMD64)
+kaishi.sys: bootstrap.bin kaishi.exe
+
+	cat $^ > $@
+
+bootstrap.bin: bootstrap.o
+
+	../../../utils/binutils/slink --oformat binary -o $@ $^
+
+kaishi.exe: $(BIOS_OBJ)
+
+	../../../utils/binutils/slink --oformat axe-amd64 -N -e _start -Map kaishi.map -o $@ $^
+
+bootx64.efi: $(EFI_OBJ)
+
+	../../../utils/binutils/slink --oformat pe-amd64 --subsystem 10 -e efi_main -o $@ $^
+
+bootstrap.o: bootstrap.asm
+
+	../../../utils/binutils/sasm -D__AMD64__ -f coff -I$(SRCDIR)/include -l bootstrap.lst -o $@ $<
+
+arch/bios/realmode/amd64.o: arch/bios/realmode/amd64.asm
+
+	if [ ! -d "arch/bios/realmode" ]; then mkdir -p "arch/bios/realmode"; fi
+	../../../utils/binutils/sasm -f coff -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f win64 -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m64 -D__AMD64__ -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f win64 -I$(SRCDIR)/include -l $*.lst -o $@ $<
+else
+kaishi.sys: bootstrap.bin kaishi.exe
+
+	cat $^ > $@
+
+bootstrap.bin: bootstrap.o
+
+	../../../utils/binutils/slink --oformat binary -o $@ $^
+
+kaishi.exe: $(BIOS_OBJ)
+
+	../../../utils/binutils/slink --oformat axe-i386 -N -e _start -Map kaishi.map -o $@ $^
+
+bootia32.efi: $(EFI_OBJ)
+
+	../../../utils/binutils/slink --oformat pe-i386 --subsystem 10 -e _efi_main -o $@ $^
+
+%.o: %.s
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -D__I386__ -I$(SRCDIR)/include -l $*.lst -o $@ $<
+
+%.s: %.c
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/scc/scc -Wall -Wextra -Werror -S -m32 -I$(SRCDIR)/include -o $@ $<
+
+%.o: %.asm
+
+	if [ ! -d $(patsubst %/, %, $(dir $@)) ]; then mkdir -p $(patsubst %/, %, $(dir $@)); fi
+	../../../utils/binutils/sasm -f coff -I$(SRCDIR)/include -l $*.lst -o $@ $<
+endif
